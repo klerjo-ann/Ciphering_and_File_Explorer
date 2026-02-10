@@ -50,13 +50,16 @@ public class DetailedFile extends DefaultMutableTreeNode implements Cloneable, C
 	}
 
 	protected void establishChildren() {
+		int startingNbChildren = getChildCount();
+
 		for (File f : f.listFiles()) {
 			DetailedFile child = new DetailedFile(f);
 			if (!contains(child))
 				add(child);
 		}
 
-		children.sort(null);
+		if (getChildCount() - startingNbChildren > 0)
+			children.sort(null);
 	}
 
 	public DetailedFile[] getChildren() {
