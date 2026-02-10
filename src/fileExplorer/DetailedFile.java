@@ -143,18 +143,18 @@ public class DetailedFile extends DefaultMutableTreeNode implements Cloneable, C
 	public int indexOf(DetailedFile child) {
 		if (children.isEmpty())
 			return -1;
-		
+
 		if (child == null)
 			return children.indexOf(null);
-		
+
 		Iterator<DetailedFile> it = children.iterator();
 		for (DetailedFile df = it.next(); it.hasNext(); df = it.next())
 			if (child.equals(df))
 				return children.indexOf(df);
-		
+
 		return -1;
 	}
-	
+
 	public boolean contains(DetailedFile child) {
 		return indexOf(child) >= 0;
 	}

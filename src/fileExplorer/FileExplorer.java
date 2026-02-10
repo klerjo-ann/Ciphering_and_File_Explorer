@@ -245,13 +245,13 @@ public class FileExplorer {
 	}
 	
 	private void goToSelection() {
-		boolean notNull = false;
+		boolean fileExists = false;
 		
 		try {
-			notNull = selection.fileExists();
+			fileExists = selection.fileExists();
 		} catch (Exception e1) {}
 		
-		if (notNull)
+		if (fileExists && !selection.equals(currentDirectory))
 			
 			if(!selection.isDirectory()) {
 				targetField.setText(selection.getAbsolutePath());
