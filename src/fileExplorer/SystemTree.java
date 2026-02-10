@@ -13,16 +13,16 @@ public class SystemTree extends JTree {
 	}
 
 	public void initializePath(DetailedFile f) {
-		setRoot(f.getRoot());
-		
-		setPath(f.getLineage());
+		setRoots(f.getRoot());
+
+		setPath(f);
 
 		setExpandsSelectedPaths(true);
 		setEditable(false);
 		setDragEnabled(false);
 	}
 
-	private void setRoot(DetailedFile root) {
+	private void setRoots(DetailedFile root) {
 		DefaultMutableTreeNode superRoot = (DefaultMutableTreeNode) getModel().getRoot();
 		superRoot.add(root);
 		for (DetailedFile r : DetailedFile.listRoots())
@@ -32,16 +32,22 @@ public class SystemTree extends JTree {
 				superRoot.add(r);
 	}
 
-	private void setPath(DetailedFile[] lineage) {
+	private void setPath(DetailedFile f) {
+		DetailedFile[] lineage = f.getLineage();
+
+		for (DetailedFile df : lineage)
+			df.establishChildren();
+
 		DefaultMutableTreeNode[] treeLineage = new DefaultMutableTreeNode[lineage.length + 1];
 		System.arraycopy(lineage, 0, treeLineage, 1, lineage.length);
 		treeLineage[0] = (DefaultMutableTreeNode) getModel().getRoot();
-		
+
 		TreePath path = new TreePath(treeLineage);
-		
+
 		expandPath(path);
 		scrollPathToVisible(path);
 		setSelectionPath(path);
+
 	}
 
 }

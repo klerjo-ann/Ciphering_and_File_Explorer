@@ -23,7 +23,10 @@ import javax.swing.JToolBar;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeWillExpandListener;
 import javax.swing.text.JTextComponent;
+import javax.swing.tree.ExpandVetoException;
 
 import org.eclipse.wb.swing.FocusTraversalOnArray;
 
@@ -40,7 +43,11 @@ public class FileExplorer {
 	private Directory currentDirectory;
 	private JTextComponent targetField;
 	
+	private JList<DetailedFile> listView;
+	private SystemTree treeView;
 	
+	private JTextField pathField;
+	private JTextField selectionField;
 	
 	
 	public static void launch(JTextComponent field, Directory d) {
@@ -77,8 +84,8 @@ public class FileExplorer {
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		
 		
-		SystemTree tree = new SystemTree(); tree.initializePath(currentDirectory);
-//		JTree tree = new JTree();
+		treeView = new SystemTree();
+		treeView.initializePath(currentDirectory);
 		
 		JSplitPane splitPane = new JSplitPane();
 		splitPane.setOneTouchExpandable(true);
@@ -101,7 +108,7 @@ public class FileExplorer {
 				RowSpec.decode("fill:20px"),});
 		panel_3.setLayout(fl_panel_3);
 		
-		JTextField pathField = new JTextField();
+		pathField = new JTextField();
 		pathField.setEditable(true);
 		panel_3.add(pathField, "2, 1, fill, center");
 		
@@ -117,7 +124,7 @@ public class FileExplorer {
 			new RowSpec[] {
 				RowSpec.decode("25px"),}));
 		
-		JTextField selectionField = new JTextField();
+		selectionField = new JTextField();
 		selectionField.setBackground(new Color(255, 255, 255));
 		panel_2.add(selectionField, "1, 1, fill, center");
 		selectionField.setColumns(10);
@@ -126,11 +133,11 @@ public class FileExplorer {
 		btnSelection.setFont(new Font("Tahoma", Font.PLAIN, 9));
 		panel_2.add(btnSelection, "2, 1, center, center");
 		
-		JList<DetailedFile> listDirectory = new JList<>();
-		listDirectory.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		listDirectory.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
+		listView = new JList<>();
+		listView.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		listView.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
 		
-		JScrollPane listScroller = new JScrollPane(listDirectory);
+		JScrollPane listScroller = new JScrollPane(listView);
 		panel_1.add(listScroller, BorderLayout.CENTER);
 		
 		
@@ -139,22 +146,18 @@ public class FileExplorer {
 		JPanel panel = new JPanel();
 		splitPane.setLeftComponent(panel);
 		splitPane.setDividerSize(10);
-		splitPane.setDividerLocation(150);
+		splitPane.setDividerLocation(250);
 		panel.setLayout(new BorderLayout(0, 0));
 		
-		JScrollPane scrollPaneTree = new JScrollPane(tree);
-		tree.scrollPathToVisible(tree.getSelectionPath());
+		JScrollPane scrollPaneTree = new JScrollPane(treeView);
+		treeView.scrollPathToVisible(treeView.getSelectionPath());
 		panel.add(scrollPaneTree);
 		
 		
-		
-		frame.getContentPane().setFocusTraversalPolicy(new FocusTraversalOnArray(new Component[]{panel, panel_1, toolBar, panel_3, pathField, btnParent, panel_2, btnSelection, selectionField, listDirectory, scrollPaneTree, splitPane}));
+		frame.getContentPane().setFocusTraversalPolicy(new FocusTraversalOnArray(new Component[]{panel, panel_1, toolBar, panel_3, pathField, btnParent, panel_2, btnSelection, selectionField, listView, scrollPaneTree, splitPane}));
 	
 		
-		
-		
-		
-		setView(listDirectory, pathField, selectionField);
+		setView();
 		
 		
 		
@@ -164,7 +167,7 @@ public class FileExplorer {
 		btnParent.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				currentDirectory = currentDirectory.getParentDirectory();
-				setView(listDirectory, pathField, selectionField);
+				setView();
 				}
 		});
 		
@@ -175,7 +178,7 @@ public class FileExplorer {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					currentDirectory = new Directory(pathField.getText());
-					setView(listDirectory, pathField, selectionField);
+					setView();
 				} catch (IllegalArgumentException e1){
 					JOptionPane.showMessageDialog(panel, e1.getMessage());
 				}
@@ -185,42 +188,63 @@ public class FileExplorer {
 		
 		
 		
-		listDirectory.addListSelectionListener( new ListSelectionListener() {
+		listView.addListSelectionListener( new ListSelectionListener() {
 			public void valueChanged(ListSelectionEvent e) {
 			    if (e.getValueIsAdjusting() == false) 
-				    if (listDirectory.getSelectedIndex() != -1){
-				    	selectionField.setText(listDirectory.getSelectedValue().toString());
-				    	selection = listDirectory.getSelectedValue();
-				    }
+				    if (listView.getSelectedIndex() != -1)
+				    	setSelection(listView.getSelectedValue());
 			}
 		});
 	
 		
-		
-		listDirectory.addMouseListener(new MouseAdapter() {
+		MouseAdapter doubleLClickHandler = new MouseAdapter() {
 			public void mouseClicked(MouseEvent e) {
 				if(e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1) {
-					goToSelection(listDirectory, pathField, selectionField);
+					goToSelection();
 				}
 			}
-		});
+		};
 		
+		
+		listView.addMouseListener(doubleLClickHandler);
+		treeView.addMouseListener(doubleLClickHandler);
 
 		
 	
 		btnSelection.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				goToSelection(listDirectory, pathField, selectionField);
+				goToSelection();
 			}
 		});
 	
+		
+		
+		treeView.addTreeWillExpandListener(new TreeWillExpandListener() {
 
+			@Override
+			public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
+				DetailedFile lastComponent = (DetailedFile) event.getPath().getLastPathComponent();
+				lastComponent.establishChildren();
+				currentDirectory = new Directory(lastComponent);
+				setView();
+			}
+
+			@Override
+			public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
+			}
+		});
+		
+		
+		treeView.addTreeSelectionListener(e -> setSelection((DetailedFile) e.getPath().getLastPathComponent()));
 	
 	}
 
-
+	private void setSelection(DetailedFile df) {
+		selection = df;
+    	selectionField.setText(selection.toString());
+	}
 	
-	private void goToSelection(JList<DetailedFile> view, JTextField pathField, JTextField selectionField) {
+	private void goToSelection() {
 		boolean notNull = false;
 		
 		try {
@@ -235,16 +259,17 @@ public class FileExplorer {
 				}
 			else {
 				currentDirectory = new Directory(selection);
-				setView(view, pathField, selectionField);
+				setView();
 			}
 	}
 	
 	
 	
-	private void setView(JList<DetailedFile> view, JTextField pathField, JTextField selectionField) {
-		view.setListData(currentDirectory.getChildren());
+	private void setView() {
+		listView.setListData(currentDirectory.getChildren());
 		pathField.setText(currentDirectory.getAbsolutePath());
 		selectionField.setText("");
+		
 	}
 	
 }

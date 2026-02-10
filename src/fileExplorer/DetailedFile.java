@@ -42,30 +42,20 @@ public class DetailedFile extends DefaultMutableTreeNode implements Cloneable, C
 		this(df.f);
 	}
 
-	public boolean add(DetailedFile df) {
-		if (children.isEmpty()) {
+	public void add(DetailedFile df) {
+		if (df != null) {
+			df.setParent(this);
 			children.add(df);
-			return true;
 		}
-
-		Iterator<DetailedFile> it = children.iterator();
-		DetailedFile f;
-
-		for (f = it.next(); it.hasNext(); f = it.next())
-			if (f.equals(df))
-				return false;
-
-		super.add(df);
-		return true;
 	}
 
 	protected void establishChildren() {
-		File[] temp = f.listFiles();
-		for (File f : temp) {
+		for (File f : f.listFiles()) {
 			DetailedFile child = new DetailedFile(f);
-			if (children.indexOf(child) == -1)
+			if (!contains(child))
 				add(child);
 		}
+
 		children.sort(null);
 	}
 
@@ -150,8 +140,23 @@ public class DetailedFile extends DefaultMutableTreeNode implements Cloneable, C
 		return children.get(index);
 	}
 
-	public int getIndex(DetailedFile child) {
-		return children.indexOf(child);
+	public int indexOf(DetailedFile child) {
+		if (children.isEmpty())
+			return -1;
+		
+		if (child == null)
+			return children.indexOf(null);
+		
+		Iterator<DetailedFile> it = children.iterator();
+		for (DetailedFile df = it.next(); it.hasNext(); df = it.next())
+			if (child.equals(df))
+				return children.indexOf(df);
+		
+		return -1;
+	}
+	
+	public boolean contains(DetailedFile child) {
+		return indexOf(child) >= 0;
 	}
 
 	public boolean hasParent() {
@@ -175,11 +180,11 @@ public class DetailedFile extends DefaultMutableTreeNode implements Cloneable, C
 		if (parent == null)
 			return new Directory(this);
 
-		return new Directory(getParent());
+		return new Directory(parent);
 	}
 
 	public boolean isLeaf() {
-		return !isDirectory();
+		return !allowsChildren;
 	}
 
 	public DetailedFile getRoot() {

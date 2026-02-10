@@ -3,7 +3,6 @@ package fileExplorer;
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.Iterator;
 
 @SuppressWarnings("serial")
 public class Directory extends DetailedFile {
@@ -29,23 +28,6 @@ public class Directory extends DetailedFile {
 			throw new IllegalArgumentException(f + "Not a directory");
 
 		establishChildren();
-	}
-
-	public boolean add(DetailedFile df) {
-		if (children.isEmpty()) {
-			children.add(df);
-			return true;
-		}
-
-		Iterator<DetailedFile> it = children.iterator();
-		DetailedFile f;
-
-		for (f = it.next(); it.hasNext(); f = it.next())
-			if (f.equals(df))
-				return false;
-
-		children.add(df);
-		return true;
 	}
 
 
